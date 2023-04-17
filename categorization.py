@@ -4,9 +4,10 @@ from PIL import Image
 from sklearn.model_selection import train_test_split
 from sklearn import svm
 from sklearn import metrics
+import scipy.stats as sci
+import math
 import matplotlib.pyplot as plt
-
-MOD = 0.1
+import matplotlib.colors as clr
 
 def rgb_average(array):
     avg = np.mean(np.mean(array, axis = 0), axis = 0)
@@ -19,7 +20,7 @@ def datagen():
     green = []
     blue = []
     catlist = []
-    categories = ['chaparral', 'forest', 'buildings', 'river']
+    categories = ['forest','buildings', 'agricultural', 'river', 'chaparral']
 
     for c in categories:
         for n in range(100):
@@ -40,21 +41,6 @@ def datagen():
     
     return img_avg, df
 
-def datavis(df):
-    groups = df.groupby('category')
-    ax = plt.axes(projection = '3d')
-
-    for name, group in groups:
-        ax.scatter3D(group.red, group.green, group.blue, marker = 'o', label = name)
-
-    ax.set_xlabel('Red', fontsize = 20, rotation = 345)
-    ax.set_ylabel('Green', fontsize = 20)
-    ax.set_zlabel('Blue', fontsize = 20, rotation = 90)
-    ax.legend()
-    plt.title('3D Scatterplot of Categories in the RGB Scale')
-    plt.savefig('4cat-rgbbands.jpg')
-    plt.show()
-
 def test_train(data):
     x_train, x_test = train_test_split(data, test_size = 0.2)
     
@@ -70,11 +56,45 @@ def test_train(data):
     predicted = clf.predict(x_test)
     print(metrics.accuracy_score(grading, predicted))
 
-def main():
-    groupdata, dataframe = datagen()
-    test_train(groupdata)
-    datavis(dataframe)
-    
+def clustering(df):
+    c = newdf = 0
+    clusters = {}
+    cat = df['category'][0]
 
-if __name__ == "__main__":
-    main()
+    while df['category'][c] == cat:
+        try:
+            if (df['category'][c + 1] == df['category'][c]):
+                if c != 0:
+                    length = int(c / (c / 100))
+            else:
+                newdf = df.iloc[:length]
+                avgpoint = (np.mean(newdf['red'].to_numpy()), np.mean(newdf['green'].to_numpy()), np.mean(newdf['blue'].to_numpy()))
+                stdrange = (np.std(newdf['red'].to_numpy()), np.std(newdf['green'].to_numpy()), np.std(newdf['blue'].to_numpy()))
+                clusters[cat] = (avgpoint, stdrange)
+                df = df.drop(index = df.index[:length])
+                cat = df['category'][c + 1]
+            c += 1
+        except KeyError:
+            newdf = df.iloc[:length]
+            avgpoint = (np.mean(newdf['red'].to_numpy()), np.mean(newdf['green'].to_numpy()), np.mean(newdf['blue'].to_numpy()))
+            stdrange = (np.std(newdf['red'].to_numpy()), np.std(newdf['green'].to_numpy()), np.std(newdf['blue'].to_numpy()))
+            clusters[cat] = (avgpoint, stdrange)
+            break
+
+    return clusters
+        
+
+def datavis(df):
+    groups = df.groupby('category')
+    ax = plt.axes(projection = '3d')
+
+    for name, group in groups:
+        ax.scatter3D(group.red, group.green, group.blue, marker = 'o', label = name)
+
+    ax.set_xlabel('Red', fontsize = 20, rotation = 345)
+    ax.set_ylabel('Green', fontsize = 20)
+    ax.set_zlabel('Blue', fontsize = 20, rotation = 90)
+    ax.legend()
+    plt.title('3D Scatterplot of Categories in the RGB Scale')
+    plt.savefig('4cat-rgbbands.jpg')
+    plt.show()
